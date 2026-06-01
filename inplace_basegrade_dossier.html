@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>In-Place BaseGrade (SS3MB) — Technical Reference Dossier · Build Plus LLC</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ═══════════════════════════════════════
+   RESET & TOKENS
+═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:           #211e1a;
+  --ink-mid:       #3d3730;
+  --ink-light:     #5c5248;
+  --bronze:        #9a7435;
+  --bronze-light:  #c49a4a;
+  --bronze-pale:   #e8d49a;
+  --bronze-dim:    rgba(154,116,53,0.18);
+  --sage:          #445c40;
+  --sage-light:    #6a8c66;
+  --page:          #f8f5f0;
+  --page-warm:     #f2ede6;
+  --rule:          rgba(33,30,26,0.10);
+  --rule-md:       rgba(33,30,26,0.18);
+  --rule-bronze:   rgba(154,116,53,0.28);
+
+  --space-xs:  8px;
+  --space-sm:  16px;
+  --space-md:  28px;
+  --space-lg:  48px;
+  --space-xl:  72px;
+  --space-2xl: 100px;
+
+  --radius:    2px;
+  --max-w:     860px;
+  --side-pad:  clamp(20px, 6vw, 72px);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font-size: clamp(17px, 1.8vw, 18px);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════
+   NAV
+═══════════════════════════════════════ */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 0 var(--side-pad);
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(33,30,26,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transform: translateY(-100%);
+  animation: navIn 0.6s 0.8s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes navIn { to { transform: translateY(0); } }
+
+.nav-brand {
+  display: flex; align-items: center; gap: 12px;
+}
+.nav-mark {
+  width: 28px; height: 28px;
+  display: flex; flex-direction: column; gap: 2px; justify-content: center;
+}
+.nav-mark span {
+  display: block; height: 3px; border-radius: 1px;
+  transform-origin: left;
+  animation: markIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+.nav-mark span:nth-child(1) { width: 100%; background: #c49a4a; animation-delay: 1.0s; }
+.nav-mark span:nth-child(2) { width: 75%;  background: #9a7435; animation-delay: 1.1s; }
+.nav-mark span:nth-child(3) { width: 55%;  background: #6e5428; animation-delay: 1.2s; }
+.nav-mark span:nth-child(4) { width: 35%;  background: #4a3820; animation-delay: 1.3s; }
+@keyframes markIn { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+
+.nav-name {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: #fff;
+}
+.nav-name span { color: var(--bronze-light); }
+
+.nav-links {
+  display: flex; gap: 28px; list-style: none;
+}
+.nav-links a {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px; display: flex; align-items: center;
+}
+.nav-links a:hover { color: var(--bronze-light); }
+
+@media (max-width: 600px) { .nav-links { display: none; } }
+
+/* ═══════════════════════════════════════
+   HERO
+═══════════════════════════════════════ */
+.hero {
+  min-height: 100svh;
+  background: var(--ink);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  position: relative; overflow: hidden;
+  padding: calc(56px + var(--space-2xl)) var(--side-pad) 0;
+}
+
+/* Grain overlay */
+.hero::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 256px;
+}
+
+/* Radial warmth */
+.hero-glow {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 15% 60%, rgba(154,116,53,0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 85% 30%, rgba(68,92,64,0.06) 0%, transparent 60%);
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: var(--max-w);
+}
+
+.hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bronze-light);
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: var(--space-md);
+  opacity: 0; animation: fadeUp 0.7s 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.hero-eyebrow::before {
+  content: ''; display: block; width: 32px; height: 1px; background: var(--bronze);
+  flex-shrink: 0;
+}
+
+.hero-title {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(44px, 8vw, 88px);
+  font-weight: 800; line-height: 1.0;
+  letter-spacing: clamp(-0.01em, -0.03em, -0.03em);
+  color: #fff;
+  margin-bottom: 20px;
+  opacity: 0; animation: fadeUp 0.8s 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--bronze-pale);
+}
+
+.hero-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(14px, 1.4vw, 15px);
+  font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase;
+  color: rgba(255,255,255,0.62);
+  margin-bottom: var(--space-lg);
+  opacity: 0; animation: fadeUp 0.7s 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+.hero-desc {
+  font-size: clamp(17px, 2vw, 19px);
+  font-weight: 400; line-height: 1.75;
+  color: rgba(255,255,255,0.82);
+  max-width: 580px;
+  margin-bottom: var(--space-xl);
+  opacity: 0; animation: fadeUp 0.7s 0.75s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.hero-desc strong { color: rgba(255,255,255,0.95); font-weight: 600; }
+
+/* Cross-section diagram */
+.cross-section {
+  display: flex; flex-direction: column; gap: 0;
+  width: 100%; max-width: 100%;
+  opacity: 0; animation: fadeUp 0.8s 0.9s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.cs-row {
+  display: flex; align-items: stretch;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.2s;
+}
+.cs-row:hover { background: rgba(255,255,255,0.025); }
+.cs-bar-wrap {
+  width: 200px; flex-shrink: 0;
+  padding: 14px 0;
+  display: flex; align-items: center;
+}
+.cs-bar {
+  height: 10px; border-radius: 1px;
+  transform-origin: left;
+  animation: barGrow 1.0s cubic-bezier(0.22,1,0.36,1) both;
+}
+.cs-row:nth-child(1) .cs-bar { width: 45%;  background: #c49a4a; animation-delay: 1.1s; }
+.cs-row:nth-child(2) .cs-bar { width: 62%;  background: #9a7435; animation-delay: 1.2s; }
+.cs-row:nth-child(3) .cs-bar { width: 76%;  background: #6e5428; animation-delay: 1.3s; }
+.cs-row:nth-child(4) .cs-bar { width: 90%;  background: #4a3820; animation-delay: 1.4s; }
+@keyframes barGrow { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+
+.cs-label {
+  flex: 1; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.cs-name {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+}
+.cs-row:nth-child(2) .cs-name { color: rgba(255,255,255,0.95); }
+.cs-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--bronze-light);
+  background: rgba(154,116,53,0.20);
+  padding: 4px 10px;
+}
+
+@media (max-width: 500px) {
+  .cs-bar-wrap { width: 120px; }
+}
+
+/* ═══════════════════════════════════════
+   LAYER STRIPE (section divider)
+═══════════════════════════════════════ */
+.layer-stripe {
+  display: flex; width: 100%; height: 8px;
+  position: relative; z-index: 2;
+}
+.layer-stripe span { flex: 1; }
+.layer-stripe .ls1 { background: #c49a4a; }
+.layer-stripe .ls2 { background: #9a7435; }
+.layer-stripe .ls3 { background: #6e5428; }
+.layer-stripe .ls4 { background: #4a3820; }
+.layer-stripe .ls5 { background: #2a2018; }
+
+/* ═══════════════════════════════════════
+   SHARED SECTION LAYOUT
+═══════════════════════════════════════ */
+.section {
+  padding: var(--space-2xl) var(--side-pad);
+}
+.section-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+}
+.section--dark {
+  background: var(--ink);
+  color: #fff;
+}
+.section--warm {
+  background: var(--page-warm);
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: #7a5c28;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: var(--space-sm);
+}
+.section-label::before {
+  content: ''; display: block; width: 24px; height: 1px;
+  background: #7a5c28; flex-shrink: 0;
+}
+.section--dark .section-label { color: var(--bronze-light); }
+.section--dark .section-label::before { background: var(--bronze-light); }
+
+h2.section-title {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 800; letter-spacing: -0.025em; line-height: 1.15;
+  color: var(--ink); margin-bottom: var(--space-md);
+}
+.section--dark h2.section-title { color: #fff; }
+
+h3.sub-title {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 700; letter-spacing: 0.005em; line-height: 1.35;
+  color: var(--ink); margin-top: var(--space-lg); margin-bottom: var(--space-xs);
+}
+.section--dark h3.sub-title { color: rgba(255,255,255,0.95); }
+
+p.body-text {
+  font-size: clamp(17px, 1.8vw, 18px);
+  line-height: 1.78; color: var(--ink-mid);
+  margin-bottom: var(--space-sm);
+}
+.section--dark p.body-text { color: rgba(255,255,255,0.82); }
+p.body-text strong { color: var(--ink); font-weight: 600; }
+.section--dark p.body-text strong { color: rgba(255,255,255,0.95); }
+
+/* ═══════════════════════════════════════
+   STAT ROW
+═══════════════════════════════════════ */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0; margin: var(--space-lg) 0;
+  border: 1px solid var(--rule-md);
+}
+.section--dark .stat-row { border-color: rgba(255,255,255,0.10); }
+.stat-cell {
+  padding: 20px 20px 18px;
+  border-right: 1px solid var(--rule-md);
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.section--dark .stat-cell { border-right-color: rgba(255,255,255,0.10); }
+.stat-cell:last-child { border-right: none; }
+.stat-value-line {
+  display: flex; align-items: baseline; gap: 0; flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.stat-num {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(26px, 3.5vw, 38px);
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  color: var(--bronze);
+  display: inline;
+}
+.stat-num.sage { color: var(--sage); }
+.stat-num.white { color: #fff; }
+.stat-unit {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(26px, 3.5vw, 38px);
+  font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  color: var(--bronze);
+  display: inline;
+}
+.stat-unit.sage { color: var(--sage); }
+.stat-unit.white { color: #fff; }
+.stat-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-light);
+  margin-top: 8px; line-height: 1.45;
+}
+.section--dark .stat-lbl { color: rgba(255,255,255,0.62); }
+
+@media (max-width: 500px) {
+  .stat-row { grid-template-columns: 1fr 1fr; }
+  .stat-cell:nth-child(2) { border-right: none; }
+  .stat-cell:nth-child(3) { border-top: 1px solid var(--rule-md); grid-column: 1/-1; }
+  .stat-num, .stat-unit { font-size: clamp(24px, 7vw, 32px); }
+}
+
+/* ═══════════════════════════════════════
+   TABLES
+═══════════════════════════════════════ */
+.table-wrap {
+  width: 100%; overflow-x: auto;
+  margin: var(--space-md) 0 var(--space-lg);
+  -webkit-overflow-scrolling: touch;
+}
+.table-cap {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 10px;
+}
+.section--dark .table-cap { color: rgba(255,255,255,0.55); }
+
+table {
+  width: 100%; border-collapse: collapse;
+  font-family: 'DM Mono', monospace; font-size: 14px;
+  min-width: 420px;
+}
+thead tr { border-bottom: 2px solid var(--ink); }
+.section--dark thead tr { border-bottom-color: rgba(255,255,255,0.25); }
+thead th {
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--ink-light);
+  padding: 12px 12px 12px 0; text-align: left; white-space: nowrap;
+}
+.section--dark thead th { color: rgba(255,255,255,0.62); }
+thead th:not(:first-child) { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--rule); }
+.section--dark tbody tr { border-bottom-color: rgba(255,255,255,0.07); }
+tbody tr:last-child { border-bottom: 1px solid var(--rule-md); }
+.section--dark tbody tr:last-child { border-bottom-color: rgba(255,255,255,0.15); }
+tbody td {
+  padding: 13px 12px 13px 0;
+  color: var(--ink); line-height: 1.55;
+  min-height: 44px;
+}
+.section--dark tbody td { color: rgba(255,255,255,0.88); }
+tbody td:not(:first-child) { text-align: right; }
+tbody td strong { font-weight: 500; }
+tbody tr.hl { background: rgba(154,116,53,0.07); }
+tbody tr.hl td:first-child { border-left: 2px solid var(--bronze); padding-left: 10px; }
+.section--dark tbody tr.hl { background: rgba(154,116,53,0.12); }
+
+/* SDS table */
+.sds-table td { font-family: 'DM Mono', monospace; font-size: 14px; padding: 11px 12px 11px 0; border-bottom: 1px solid var(--rule); line-height: 1.55; }
+.sds-table td:last-child { text-align: right; color: var(--ink-mid); }
+.sds-table tr:last-child td { border-bottom: none; }
+
+/* Spec table centered non-first */
+.spec-table thead th:not(:first-child),
+.spec-table tbody td:not(:first-child) { text-align: center; }
+
+/* ═══════════════════════════════════════
+   INFO BOXES
+═══════════════════════════════════════ */
+.info-box {
+  padding: 18px 20px; margin: var(--space-md) 0;
+  font-size: clamp(17px, 1.8vw, 18px);
+  line-height: 1.72; color: var(--ink-mid);
+}
+.info-box.bronze {
+  border-left: 3px solid var(--bronze);
+  background: rgba(154,116,53,0.06);
+}
+.info-box.sage {
+  border-left: 3px solid var(--sage);
+  background: rgba(68,92,64,0.06);
+}
+.info-box.warm {
+  border-left: 3px solid var(--rule-md);
+  background: var(--page-warm);
+}
+.info-box strong { color: var(--ink); font-weight: 600; }
+
+/* ═══════════════════════════════════════
+   PROPERTY STRIP
+═══════════════════════════════════════ */
+.property-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0; border: 1px solid var(--rule-md);
+  margin: var(--space-md) 0;
+}
+.prop-cell {
+  padding: 16px 16px; border-right: 1px solid var(--rule-md);
+}
+.prop-cell:last-child { border-right: none; }
+.prop-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-light); margin-bottom: 5px;
+}
+.prop-name { font-size: 15px; font-weight: 600; line-height: 1.4; }
+
+@media (max-width: 700px) {
+  .property-strip { grid-template-columns: 1fr 1fr; }
+  .prop-cell:nth-child(2) { border-right: none; }
+  .prop-cell { border-bottom: 1px solid var(--rule-md); }
+  .prop-cell:last-child { border-bottom: none; grid-column: 1/-1; }
+}
+
+/* ═══════════════════════════════════════
+   TEST PROTOCOL ITEMS
+═══════════════════════════════════════ */
+.test-list { margin-top: var(--space-md); }
+.test-item {
+  display: flex; gap: 0;
+  margin-bottom: var(--space-sm);
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.test-item.visible { opacity: 1; transform: translateY(0); }
+.test-num {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 800; line-height: 1;
+  color: rgba(255,255,255,0.10);
+  width: 44px; flex-shrink: 0; margin-top: 2px;
+}
+.test-body {
+  flex: 1; padding: 0 0 var(--space-md) 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.test-item:last-child .test-body { border-bottom: none; }
+.test-title {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(17px, 1.8vw, 19px);
+  font-weight: 700; color: #fff;
+  margin-bottom: 6px; line-height: 1.3;
+}
+.test-text {
+  font-size: clamp(17px, 1.8vw, 18px);
+  line-height: 1.72; color: rgba(255,255,255,0.82);
+}
+
+/* ═══════════════════════════════════════
+   EVAL GATE CTA
+═══════════════════════════════════════ */
+.eval-gate {
+  margin-top: var(--space-lg);
+  padding: 24px 28px;
+  background: rgba(154,116,53,0.12);
+  border: 1px solid rgba(196,154,74,0.30);
+}
+.eval-gate-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bronze-pale); margin-bottom: 10px;
+}
+.eval-gate p {
+  color: rgba(255,255,255,0.88);
+  font-size: clamp(17px, 1.8vw, 18px);
+  font-weight: 500; line-height: 1.7;
+  margin: 0;
+}
+.eval-gate a {
+  color: var(--bronze-pale);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════
+   CLOSING PANEL
+═══════════════════════════════════════ */
+.closing-panel {
+  background: var(--page-warm);
+  border-top: 3px solid var(--ink);
+  padding: var(--space-xl) var(--side-pad);
+}
+.closing-inner {
+  max-width: var(--max-w); margin: 0 auto;
+}
+.closing-panel h2.section-title { margin-bottom: var(--space-md); }
+.closing-panel p.body-text { font-size: clamp(16px, 1.9vw, 19px); }
+.closing-bottom-line {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--rule-bronze);
+  font-size: clamp(16px, 1.9vw, 20px);
+  font-weight: 700; line-height: 1.65;
+  color: var(--ink);
+}
+
+/* ═══════════════════════════════════════
+   GLOSSARY
+═══════════════════════════════════════ */
+.gloss-grid {
+  columns: 2; column-gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+.gloss-item {
+  break-inside: avoid;
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--rule);
+}
+.gloss-term {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  color: var(--ink); letter-spacing: 0.03em; margin-bottom: 4px;
+}
+.gloss-def {
+  font-size: 15px; line-height: 1.65;
+  color: var(--ink-mid); font-weight: 400;
+}
+@media (max-width: 600px) { .gloss-grid { columns: 1; } }
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+.footer {
+  background: var(--ink);
+  padding: var(--space-lg) var(--side-pad);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-md);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-brand {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+}
+.footer-brand span { color: var(--bronze-light); }
+.footer-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; color: rgba(255,255,255,0.50);
+  letter-spacing: 0.04em; line-height: 1.8;
+  text-align: right;
+}
+@media (max-width: 600px) { .footer { flex-direction: column; } .footer-meta { text-align: left; } }
+
+/* ═══════════════════════════════════════
+   TEXT A STRATEGIST — FAB
+═══════════════════════════════════════ */
+.fab {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  z-index: 200;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 24px 0 18px;
+  height: 60px;
+  background: var(--bronze);
+  color: #fff;
+  text-decoration: none;
+  border: none; cursor: pointer;
+  font-family: 'Barlow', sans-serif;
+  box-shadow: 0 4px 28px rgba(154,116,53,0.50), 0 2px 6px rgba(0,0,0,0.30);
+  transform: translateY(100px);
+  animation: fabIn 0.7s 1.4s cubic-bezier(0.22,1,0.36,1) forwards;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+  white-space: nowrap;
+}
+.fab:hover {
+  background: var(--bronze-light);
+  box-shadow: 0 8px 36px rgba(154,116,53,0.60), 0 2px 6px rgba(0,0,0,0.30);
+  transform: translateY(-3px) !important;
+}
+.fab:active { transform: translateY(0px) !important; }
+@keyframes fabIn { to { transform: translateY(0); } }
+
+.fab-icon {
+  width: 24px; height: 24px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.fab-icon svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.fab-text {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.fab-label {
+  font-size: 17px; font-weight: 700;
+  letter-spacing: 0.01em; line-height: 1.15; color: #fff;
+}
+.fab-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255,255,255,0.88);
+  line-height: 1.2;
+}
+
+/* Pulse ring on FAB */
+.fab::before {
+  content: '';
+  position: absolute; inset: -4px;
+  border: 2px solid var(--bronze-light);
+  opacity: 0;
+  animation: fabPulse 3s 2.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes fabPulse {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.18); }
+}
+
+@media (max-width: 600px) {
+  .fab {
+    bottom: 20px; right: 16px;
+    height: 56px;
+    padding: 0 18px 0 14px;
+    gap: 10px;
+  }
+  .fab-label { font-size: 16px; }
+  .fab-sub { font-size: 10px; letter-spacing: 0.06em; }
+}
+
+/* ═══════════════════════════════════════
+   TEXT A STRATEGIST — NAV BUTTON
+═══════════════════════════════════════ */
+.nav-cta {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 16px;
+  height: 44px;
+  background: var(--bronze);
+  color: #fff !important;
+  text-decoration: none;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  white-space: nowrap;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.nav-cta:hover { background: var(--bronze-light) !important; color: #fff !important; }
+.nav-cta svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   TEXT A STRATEGIST — INLINE SECTION CTA
+═══════════════════════════════════════ */
+.section-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+  margin-top: var(--space-xl);
+  padding: 20px 24px;
+  border: 1px solid var(--rule-bronze);
+  background: rgba(154,116,53,0.04);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+.section-cta:hover {
+  background: rgba(154,116,53,0.08);
+  border-color: var(--bronze);
+}
+.section--dark .section-cta {
+  border-color: rgba(196,154,74,0.30);
+  background: rgba(154,116,53,0.08);
+}
+.section--dark .section-cta:hover {
+  background: rgba(154,116,53,0.15);
+  border-color: var(--bronze-light);
+}
+.section-cta-text {}
+.section-cta-label {
+  font-family: 'Barlow', sans-serif;
+  font-size: clamp(17px, 1.8vw, 18px);
+  font-weight: 700; color: var(--ink);
+  line-height: 1.35; margin-bottom: 4px;
+}
+.section--dark .section-cta-label { color: #fff; }
+.section-cta-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: #7a5c28;
+  line-height: 1.4;
+}
+.section--dark .section-cta-sub { color: var(--bronze-light); }
+.section-cta-arrow {
+  width: 48px; height: 48px; flex-shrink: 0;
+  background: var(--bronze);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+.section-cta:hover .section-cta-arrow {
+  background: var(--bronze-light);
+  transform: translateX(3px);
+}
+.section-cta-arrow svg {
+  width: 18px; height: 18px;
+  fill: none; stroke: #fff; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+@media (max-width: 500px) {
+  .section-cta { flex-direction: column; align-items: flex-start; }
+  .section-cta-arrow { align-self: flex-end; }
+}
+
+/* ═══════════════════════════════════════
+   SCROLL REVEAL
+═══════════════════════════════════════ */
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1),
+              transform 0.65s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.10s; }
+.reveal-delay-2 { transition-delay: 0.20s; }
+.reveal-delay-3 { transition-delay: 0.30s; }
+.reveal-delay-4 { transition-delay: 0.40s; }
+
+/* ═══════════════════════════════════════
+   COUNTER ANIMATION
+═══════════════════════════════════════ */
+.count-num { display: inline-block; }
+
+/* ═══════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+ol.process-list {
+  padding-left: 0; list-style: none;
+  counter-reset: step;
+}
+ol.process-list li {
+  counter-increment: step;
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 16px 0; border-bottom: 1px solid var(--rule);
+  font-size: clamp(17px, 1.8vw, 18px); line-height: 1.72; color: var(--ink-mid);
+}
+ol.process-list li::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+  color: #7a5c28; flex-shrink: 0; margin-top: 4px;
+  width: 28px;
+}
+ol.process-list li:last-child { border-bottom: none; }
+
+/* ═══════════════════════════════════════
+   PRINT OVERRIDES
+═══════════════════════════════════════ */
+@media print {
+  .nav { position: static; transform: none; background: var(--ink); }
+  .hero { min-height: auto; page-break-after: always; }
+  .section { page-break-inside: avoid; }
+  .reveal { opacity: 1; transform: none; }
+  .test-item { opacity: 1; transform: none; }
+  body { font-size: 10pt; }
+}
+
+/* ═══════════════════════════════════════
+   REDUCED MOTION
+═══════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+  .test-item { opacity: 1; transform: none; }
+  .fab { transform: none; animation: none; }
+  .nav { transform: none; animation: none; }
+}
+
+/* ═══════════════════════════════════════
+   DYNAMIC TYPE / LARGE TEXT SAFETY
+═══════════════════════════════════════ */
+@media (max-width: 400px) {
+  .gloss-grid { columns: 1; }
+  .property-strip { grid-template-columns: 1fr; }
+  .prop-cell { border-right: none; border-bottom: 1px solid var(--rule-md); }
+  .fab { height: auto; min-height: 56px; padding-top: 12px; padding-bottom: 12px; white-space: normal; max-width: calc(100vw - 32px); }
+  .fab-label { font-size: 15px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ════ NAV ════ -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-mark">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="nav-name">Build <span>Plus</span> LLC</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <ul class="nav-links">
+      <li><a href="#product">Product</a></li>
+      <li><a href="#performance">Performance</a></li>
+      <li><a href="#application">Application</a></li>
+      <li><a href="#testing">Testing</a></li>
+    </ul>
+    <a class="nav-cta" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Text a Strategist
+    </a>
+  </div>
+</nav>
+
+<!-- ════ FLOATING CTA ════ -->
+<a class="fab" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" aria-label="Text a Strategist">
+  <div class="fab-icon">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </div>
+  <div class="fab-text">
+    <div class="fab-label">Text a Strategist</div>
+    <div class="fab-sub">Get project guidance</div>
+  </div>
+</a>
+
+<!-- ════ HERO ════ -->
+<section class="hero" id="product">
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+
+    <div class="hero-eyebrow">
+      Build Plus LLC &nbsp;·&nbsp; Engineered Earth Solutions
+    </div>
+
+    <h1 class="hero-title">
+      In-Place<br><em>BaseGrade</em>
+    </h1>
+
+    <div class="hero-sub">
+      SS3MB · Modified Macro Molecular Binder · Soil &amp; Base Stabilization
+    </div>
+
+    <p class="hero-desc">
+      <strong>Convert native soil into engineered structural base — in place, with standard equipment, at a fraction of the cost of hauled aggregate.</strong> Independent laboratory testing documents strength improvements up to 98% on clay-rich soils. Cold application, no VOC, non-toxic.
+    </p>
+
+    <div class="cross-section">
+      <div class="cs-row">
+        <div class="cs-bar-wrap"><div class="cs-bar"></div></div>
+        <div class="cs-label">
+          <div class="cs-name">Surface Course</div>
+        </div>
+      </div>
+      <div class="cs-row">
+        <div class="cs-bar-wrap"><div class="cs-bar"></div></div>
+        <div class="cs-label">
+          <div class="cs-name">Base Course</div>
+          <div class="cs-tag">SS3MB Treated</div>
+        </div>
+      </div>
+      <div class="cs-row">
+        <div class="cs-bar-wrap"><div class="cs-bar"></div></div>
+        <div class="cs-label">
+          <div class="cs-name">Subbase</div>
+        </div>
+      </div>
+      <div class="cs-row">
+        <div class="cs-bar-wrap"><div class="cs-bar"></div></div>
+        <div class="cs-label">
+          <div class="cs-name">Subgrade</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="layer-stripe" style="position:relative;z-index:2;margin-top:48px;">
+    <span class="ls1"></span><span class="ls2"></span>
+    <span class="ls3"></span><span class="ls4"></span><span class="ls5"></span>
+  </div>
+</section>
+
+<!-- ════ SECTION 1 — OVERVIEW ════ -->
+<section class="section" id="overview">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 1</div>
+    <h2 class="section-title reveal reveal-delay-1">Product Overview</h2>
+
+    <p class="body-text reveal reveal-delay-2">In-Place BaseGrade is a soil and base stabilization treatment that converts native soil and reclaimed road material into engineered structural base using cold, in-place application with standard construction equipment. The active chemistry is designated SS3MB — Sta'bl SOIL 3MB, where 3MB stands for <strong>Modified Macro Molecular Binder.</strong></p>
+
+    <p class="body-text reveal reveal-delay-3">The product has been in commercial application for approximately two decades under several successive trade designations — PMB, SSPMB, 3MB, and Sta'bl SOIL — all referring to the same formulation. The third-party testing laboratory with the longest continuous relationship with the material has confirmed in writing that SS3MB is the same product previously tested under those earlier names. The full historical test record is continuous and traceable.</p>
+
+    <p class="body-text reveal">In-Place BaseGrade is distributed exclusively in North America by Build Plus LLC.</p>
+
+    <div class="info-box bronze reveal">
+      <strong>Material characteristics:</strong> Colorless liquid, pH 7–8, specific gravity 1.05. Non-flammable. Not regulated as a hazardous material by US DOT, IATA, IMDG, or ADR. NFPA: Health 1, Flammability 0, Reactivity 0. Non-toxic, VOC-free, 90% biodegradable by OECD 302B. Cleanup with water.
+    </div>
+
+    <h3 class="sub-title reveal">Published Composition (SDS)</h3>
+    <div class="table-wrap reveal">
+      <div class="table-cap">SS3MB Concentrate — Safety Data Sheet Declaration</div>
+      <table class="sds-table" style="min-width:280px;">
+        <tbody>
+          <tr><td>Water</td><td>90–93%</td></tr>
+          <tr><td>Alcohol</td><td>&lt; 10%</td></tr>
+          <tr><td>Polyethylene terephthalate</td><td>&lt; 6%</td></tr>
+          <tr><td>1-Butanol zirconium salt</td><td>&lt; 1%</td></tr>
+          <tr><td>Other (proprietary)</td><td>&lt; 2%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Questions about SS3MB for your project?</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 2 — MECHANISM ════ -->
+<section class="section section--dark" id="mechanism">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 2</div>
+    <h2 class="section-title reveal reveal-delay-1">Mechanism of Action</h2>
+
+    <p class="body-text reveal reveal-delay-2">When the diluted binder is blended uniformly into soil at controlled moisture content and the mixture is compacted, the binder forms a crosslinked molecular structure through the soil matrix. It coats and bonds fine particles to larger aggregate, fills voids, and consolidates the mass into a <strong>semi-flexible, load-bearing layer.</strong> Strength derives from the binder network working in combination with mechanical compaction.</p>
+
+    <div class="stat-row reveal">
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num white">Cold</div></div>
+        <div class="stat-lbl">No heat, no VOC, standard equipment</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num white">24–36</div><div class="stat-unit white">hr</div></div>
+        <div class="stat-lbl">Natural cure, arid conditions</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num white">98</div><div class="stat-unit white">%</div></div>
+        <div class="stat-lbl">Compaction with standard rollers</div>
+      </div>
+    </div>
+
+    <p class="body-text reveal"><strong>Semi-flexible behavior.</strong> Unlike cement-stabilized base, which is rigid and prone to shrinkage cracking, the treated material retains slight flexibility under traffic loading and thermal cycling — measurable via resilient modulus and indirect tensile testing (Section 5).</p>
+
+    <p class="body-text reveal"><strong>Portland cement option.</strong> For applications requiring higher rigidity, SS3MB can be combined with less than 5% Portland cement in a full-depth reclamation mix, producing structural strengths of 5,000 to 6,000 PSI at 12-inch minimum depth. This is evaluated as a distinct mix design with separate QA targets.</p>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Want to see how this chemistry applies to your soils?</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 3 — PERFORMANCE ════ -->
+<section class="section" id="performance">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 3</div>
+    <h2 class="section-title reveal reveal-delay-1">Structural Performance Data</h2>
+
+    <h3 class="sub-title reveal">3.1 California Bearing Ratio — Independent Laboratory</h3>
+    <p class="body-text reveal reveal-delay-1">Independent laboratory testing, Baja California, Mexico, September 2025. Two dosage ratios evaluated: 1 liter concentrate per 6 m³ soil (1:6) and per 3 m³ (1:3). CBR measures load-bearing strength as a percentage of a standard crushed-stone reference.</p>
+
+    <div class="table-wrap reveal">
+      <div class="table-cap">CBR Improvement by Soil Type — Independent Laboratory, Sep. 2025</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Soil Type</th>
+            <th>Natural CBR</th>
+            <th>Treated CBR</th>
+            <th>Improvement</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Natural soil (1:6 ratio)</td><td>46</td><td>74</td><td>61%</td></tr>
+          <tr class="hl"><td><strong>Clay-rich soil</strong></td><td><strong>31.9</strong></td><td><strong>63.3</strong></td><td><strong>98%</strong></td></tr>
+          <tr><td>Sandy soil</td><td>—</td><td>—</td><td>30%</td></tr>
+          <tr><td>Variable sandy soils</td><td>varies</td><td>varies</td><td>28–31%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box bronze reveal">
+      The clay-rich soil result — 98% CBR improvement — is the most structurally significant data point in this dataset. Expansive clays present the most challenging stabilization environment due to moisture-induced swell and low inherent bearing strength. Nearly doubling CBR on a clay-rich material demonstrates the binder's effectiveness precisely where conventional stabilization approaches are most limited.
+    </div>
+
+    <h3 class="sub-title reveal">3.2 Strength Development Over Time</h3>
+    <p class="body-text reveal reveal-delay-1">Two independent datasets — different methods, different laboratories, different materials — produce a consistent curve: most strength achieved within days, full maturity over two to three weeks.</p>
+
+    <div class="stat-row reveal">
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num" data-target="80">0</div><div class="stat-unit">%</div></div>
+        <div class="stat-lbl">Max strength within 4 days</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num sage">18–20</div><div class="stat-unit sage">d</div></div>
+        <div class="stat-lbl">Days to full strength maturity</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value-line"><div class="stat-num" data-target="15">0</div><div class="stat-unit">%</div></div>
+        <div class="stat-lbl">Added strength, 5→7 ton compaction</div>
+      </div>
+    </div>
+
+    <div class="table-wrap reveal">
+      <div class="table-cap">Marshall Stability by Cure Time — Third-Party Laboratory (ASTM D1559)</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cure Time</th>
+            <th>On RAP (lbs)</th>
+            <th>On Aggregate Base (lbs)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>4 hours</td><td>3,444</td><td>2,528</td></tr>
+          <tr><td>4 days</td><td>6,696</td><td>4,914</td></tr>
+          <tr class="hl"><td><strong>10 days</strong></td><td><strong>8,019</strong></td><td><strong>8,335</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="body-text reveal" style="font-size:14px;color:var(--ink-light);">RAP = Recycled Asphalt Pavement. Two independent laboratories, two test methods, two materials — consistent strength-gain curve across all configurations.</p>
+
+    <h3 class="sub-title reveal">3.3 Compressive Strength</h3>
+    <p class="body-text reveal reveal-delay-1">Binder-alone treatment achieves compressive strength equivalent to concrete at 3,000 PSI. Combined with Portland cement in FDR at 12-inch minimum depth, structural strengths of 5,000 to 6,000 PSI have been documented. Project-specific UCS testing on representative samples is available for any specification program.</p>
+
+    <h3 class="sub-title reveal">3.4 Cementitious System Performance</h3>
+    <p class="body-text reveal reveal-delay-1">University of Sinaloa, Faculty of Engineering (2022): SS3MB as admixture in Portland cement paste and mortar at 0.1% dosage.</p>
+    <div class="table-wrap reveal">
+      <div class="table-cap">Compressive Strength Gain vs. Control — University of Sinaloa, 2022</div>
+      <table>
+        <thead>
+          <tr><th>Mix</th><th>7-Day</th><th>14-Day</th><th>28-Day</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Cement paste (0.1% SS3MB)</td><td>+98%</td><td>+129%</td><td>—</td></tr>
+          <tr><td>Mortar (0.1% SS3MB)</td><td>+8%</td><td>+46%</td><td>+16%</td></tr>
+          <tr><td>Mortar + silica fume</td><td colspan="3" style="text-align:center;">Larger gains across all ages</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Ready to see these numbers on your material?</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 4 — SPEC FRAMEWORK ════ -->
+<section class="section section--dark" id="specification">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 4</div>
+    <h2 class="section-title reveal reveal-delay-1">Performance Specification Framework</h2>
+
+    <p class="body-text reveal reveal-delay-2">In-Place BaseGrade is characterized within a full performance specification framework, with each parameter tied to an established ASTM or AASHTO test method. This aligns directly with the test suite used to qualify full-depth reclamation and stabilized base industry-wide, enabling apples-to-apples comparison against conventional materials.</p>
+
+    <div class="table-wrap reveal">
+      <div class="table-cap">Performance Parameters and Test Methods</div>
+      <table>
+        <thead>
+          <tr><th>Parameter</th><th>Method</th><th>Application</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Early curing strength</td><td>ASTM D1560</td><td>Construction QA — confirms on-schedule strength gain</td></tr>
+          <tr><td>Strength &amp; moisture resistance</td><td>ASTM D4867</td><td>Retained strength after water exposure</td></tr>
+          <tr><td>Structural stiffness</td><td>ASTM D4123</td><td>Resilient modulus — key input for thickness design</td></tr>
+          <tr><td>Thermal cracking resistance</td><td>AASHTO T322 (IDT)</td><td>Low-temperature cracking performance</td></tr>
+          <tr><td>Construction consistency</td><td>QA/QC protocol</td><td>Field reliability verification</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub-title reveal">Minimum Acceptance Thresholds</h3>
+    <p class="body-text reveal reveal-delay-1">Specimens prepared in a 150-mm Superpave Gyratory Compactor (SGC). Thresholds keyed to P200 — the percentage of material finer than the No. 200 sieve. Values are starting points, adjustable to agency requirements.</p>
+
+    <div class="table-wrap reveal">
+      <div class="table-cap">Published Acceptance Values by Fines Content</div>
+      <table class="spec-table">
+        <thead>
+          <tr><th>Parameter</th><th>P200 &lt; 8%</th><th>P200 &gt; 8%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Short-term strength (g/in)</td><td>175</td><td>150</td></tr>
+          <tr><td>Indirect tensile strength / ITS (psi)</td><td>40</td><td>35</td></tr>
+          <tr><td>Retained ITS (psi)</td><td>25</td><td>20</td></tr>
+          <tr class="hl"><td><strong>Resilient modulus (psi)</strong></td><td><strong>150,000</strong></td><td><strong>120,000</strong></td></tr>
+          <tr><td>Thermal cracking</td><td colspan="2" style="text-align:center;">Project dependent</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub-title reveal">Engineered Binder Mix Design</h3>
+    <p class="body-text reveal reveal-delay-1">Every project receives a mix design developed against five performance properties measured on representative samples of the native material. These become the construction QA targets:</p>
+
+    <div class="property-strip reveal">
+      <div class="prop-cell"><div class="prop-num">01</div><div class="prop-name">Short-term strength</div></div>
+      <div class="prop-cell"><div class="prop-num">02</div><div class="prop-name">Dry strength</div></div>
+      <div class="prop-cell"><div class="prop-num">03</div><div class="prop-name">Moisture-conditioned strength</div></div>
+      <div class="prop-cell"><div class="prop-num">04</div><div class="prop-name">Modulus</div></div>
+      <div class="prop-cell"><div class="prop-num">05</div><div class="prop-name">Thermal cracking resistance</div></div>
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Want a mix design developed for your native soils?</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 5 — SITE SELECTION + APPLICATION ════ -->
+<section class="section" id="application">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 5</div>
+    <h2 class="section-title reveal reveal-delay-1">Site Selection &amp; Application</h2>
+
+    <h3 class="sub-title reveal">Candidate Road Profile</h3>
+    <p class="body-text reveal reveal-delay-1">In-Place BaseGrade is designed for full-depth reclamation (FDR) and granular base stabilization (GBS). A well-suited candidate shows distressed bituminous surface over granular base — fatigue cracking, block cracking, or potholes — with a granular surface that does not rut easily when wet. Full-depth distress not driven by subgrade failure. Existing or correctable drainage. Minimum 6 inches of reclaimable material; maximum reclamation depth 10 inches.</p>
+
+    <h3 class="sub-title reveal">Pre-Design Site Evaluation</h3>
+    <div class="table-wrap reveal">
+      <div class="table-cap">Standard Evaluation Testing Menu</div>
+      <table>
+        <thead><tr><th>Test</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Borings to 5 ft</td><td>Layer thickness, soil classification, groundwater depth</td></tr>
+          <tr><td>Dynamic cone penetrometer (DCP)</td><td>In-place strength profile by depth</td></tr>
+          <tr><td>Falling weight deflectometer (FWD)</td><td>Back-calculate subgrade stiffness</td></tr>
+          <tr><td>R-value or CBR, subgrade samples</td><td>Subgrade bearing capacity</td></tr>
+          <tr><td>Proof rolling</td><td>Surface stability assessment</td></tr>
+          <tr><td>Native soil sample — min. 350 lb</td><td>Required for project mix design</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sub-title reveal">Application Process</h3>
+    <ol class="process-list reveal">
+      <li>Native soil samples are taken and tested to establish composition and binder dosage. Mix design is soil-specific and is completed for every project before work begins.</li>
+      <li>Concentrate is diluted with potable water to the specified ratio and blended into the soil with a reclaimer or milling machine at 6–12 inches depth, targeting 8–13% moisture content.</li>
+      <li>The blended material is graded and compacted to maximum achievable density. Compaction of 98% or higher is consistently achieved.</li>
+      <li>The layer cures by natural drying to the project-specified strength targets.</li>
+      <li>A moisture-sealing surface treatment is applied, followed by the specified wear surface — chip seal, microsurfacing, or hot-mix asphalt overlay.</li>
+    </ol>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:var(--space-lg);">
+      <div>
+        <h3 class="sub-title reveal">Reference Dilution Ratios</h3>
+        <div class="table-wrap reveal">
+          <div class="table-cap">Water:Concentrate by Volume</div>
+          <table style="min-width:260px;">
+            <thead><tr><th>Dilution</th><th>Conc. %</th><th>Gal / 2,000 gal</th></tr></thead>
+            <tbody>
+              <tr><td>4:1</td><td>20.0%</td><td>400</td></tr>
+              <tr><td>6:1</td><td>14.2%</td><td>284</td></tr>
+              <tr><td>8:1</td><td>11.1%</td><td>222</td></tr>
+              <tr><td>10:1</td><td>9.1%</td><td>182</td></tr>
+              <tr><td>12:1</td><td>7.6%</td><td>152</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3 class="sub-title reveal">Traffic-Load Targets</h3>
+        <div class="table-wrap reveal">
+          <div class="table-cap">ESAL Design Targets</div>
+          <table style="min-width:260px;">
+            <thead><tr><th>Traffic</th><th>Marshall / Flow</th><th>Target</th></tr></thead>
+            <tbody>
+              <tr><td>Light</td><td>3,336 N / 5%</td><td>750 psi</td></tr>
+              <tr><td>Medium</td><td>5,338 N / 5%</td><td>1,200 psi</td></tr>
+              <tr class="hl"><td><strong>Heavy</strong></td><td><strong>8,006 N / 5%</strong></td><td><strong>1,800 psi</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub-title reveal">Field Cases</h3>
+    <div class="table-wrap reveal">
+      <table>
+        <thead><tr><th>Location</th><th>Climate</th><th>Application</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr class="hl"><td><strong>South Bend, Indiana</strong></td><td>Freeze-thaw</td><td>1-mile FDR; chip seal placed following day</td><td>Successful same-cycle construction</td></tr>
+          <tr><td>Garland Dr., Prescott, AZ</td><td>Arid</td><td>Full application; multi-year documentation</td><td>Documented longevity in service</td></tr>
+          <tr><td>Compressed earth blocks, NM</td><td>Semi-arid</td><td>Rain exposure at 12-hr cure; 2.5 in. over 2 days</td><td>300 psi at 18 hrs; NM 30-day cure code met</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box sage reveal">
+      The South Bend case documents constructability and next-day wear-surface placement in a freeze-thaw climate — one of the more demanding scenarios for any base stabilization treatment.
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Is your road a candidate? Let's find out.</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 6 — TESTING RECORD ════ -->
+<section class="section section--warm" id="record">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 6</div>
+    <h2 class="section-title reveal reveal-delay-1">Third-Party Testing Record</h2>
+
+    <p class="body-text reveal reveal-delay-2">The third-party testing relationship with an independent geotechnical laboratory spans more than ten years. A licensed professional engineer confirmed in writing that SS3MB is a Modified Macro Molecular Binder tested with native soils ranging from windblown sand to expansive clay and with recycled asphalt pavement, all conducted in accordance with ASTM and AASHTO standards.</p>
+
+    <p class="body-text reveal">ASTM and AASHTO methods in the test record include: D1557 (compaction), D1883 (CBR), D4318 (Atterberg limits), D1560 and D4867 (strength and moisture resistance), D4123 (resilient modulus), AASHTO T322 (indirect tensile), C136/C117 (gradation). The material has been measured by the full standard toolset of pavement materials engineering.</p>
+
+    <div class="info-box bronze reveal">
+      <strong>Accreditation note.</strong> The third-party laboratory held AASHTO accreditation and US Army Corps of Engineers qualification at the time all referenced testing was conducted. Build Plus can facilitate engagement with a currently accredited laboratory for project-specific mix design and verification testing.
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Want to request the full third-party test record?</div>
+        <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ SECTION 7 — TESTING PROTOCOL (DARK) ════ -->
+<section class="section section--dark" id="testing">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Section 7</div>
+    <h2 class="section-title reveal reveal-delay-1">Standard Next-Step Testing Protocol</h2>
+    <p class="body-text reveal reveal-delay-2">The following sequence is standard practice for bringing any new stabilization material into an agency's approved-products list or structural pavement design. Build Plus provides project mix design support and can facilitate third-party testing coordination for each item.</p>
+
+    <div class="test-list">
+      <div class="test-item">
+        <div class="test-num">1</div>
+        <div class="test-body">
+          <div class="test-title">Resilient Modulus and Structural Layer Coefficient</div>
+          <div class="test-text">Resilient modulus testing on project-representative specimens, with derivation of the structural layer coefficient (a-value) for AASHTO 1993 or mechanistic-empirical pavement thickness design — the standard entry point for writing any stabilized material into a pavement section.</div>
+        </div>
+      </div>
+      <div class="test-item">
+        <div class="test-num">2</div>
+        <div class="test-body">
+          <div class="test-title">Moisture Durability and Freeze-Thaw Cycling</div>
+          <div class="test-text">Retained-strength testing after moisture conditioning (ASTM D4867) and wet-dry / freeze-thaw durability testing (ASTM D559/D560 family). Standard protocol for stabilized base entering service in wet or freeze-prone climates.</div>
+        </div>
+      </div>
+      <div class="test-item">
+        <div class="test-num">3</div>
+        <div class="test-body">
+          <div class="test-title">Unconfined Compressive Strength on Project Mix Design</div>
+          <div class="test-text">UCS testing (ASTM D1633 protocol) on the project-specific mix design — binder-alone and, where applicable, binder-plus-cement — to establish design strength values tied to the native material.</div>
+        </div>
+      </div>
+      <div class="test-item">
+        <div class="test-num">4</div>
+        <div class="test-body">
+          <div class="test-title">Project Mix Design on Native Soils</div>
+          <div class="test-text">A full engineered-binder mix design against the five performance properties using a minimum 350-pound sample of the project's native material. Included as standard with all Build Plus-supplied projects.</div>
+        </div>
+      </div>
+      <div class="test-item">
+        <div class="test-num">5</div>
+        <div class="test-body">
+          <div class="test-title">Current Third-Party Accreditation</div>
+          <div class="test-text">For agencies requiring testing under current AASHTO accreditation, Build Plus can coordinate with a qualified laboratory. Contact us to arrange.</div>
+        </div>
+      </div>
+      <div class="test-item">
+        <div class="test-num">6</div>
+        <div class="test-body">
+          <div class="test-title">Environmental Review</div>
+          <div class="test-text">For projects near groundwater or surface water, project-specific leachate and aquatic-toxicity review against jurisdiction requirements. Full SDS available on request. The product is non-toxic, non-VOC, non-regulated by US DOT, and 90% biodegradable by OECD 302B.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="eval-gate reveal" id="contact">
+      <div class="eval-gate-label">Start a Project Evaluation</div>
+      <p>Build Plus provides mix design, testing coordination, and technical support for all project evaluations. Text Dan directly to initiate a site assessment or to request the full third-party test record.</p>
+      <a href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:0 20px;height:44px;background:var(--bronze);color:#fff;text-decoration:none;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.04em;transition:background 0.2s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Text Dan · (864) 777-0688
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<div class="layer-stripe"><span class="ls1"></span><span class="ls2"></span><span class="ls3"></span><span class="ls4"></span><span class="ls5"></span></div>
+
+<!-- ════ CLOSING PANEL ════ -->
+<section class="closing-panel">
+  <div class="closing-inner">
+
+    <div class="section-label reveal">Summary</div>
+    <h2 class="section-title reveal reveal-delay-1">For the Non-Technical Reader</h2>
+
+    <p class="body-text reveal reveal-delay-2">In-Place BaseGrade is a water-based liquid mixed into existing road material or native soil and compacted in place. It binds the soil particles together and converts marginal native soil into structural road base — eliminating or substantially reducing the cost of hauling aggregate from off-site. Independent laboratory tests show large strength improvements, including nearly doubling the load-bearing strength of difficult clay soils. The material gains most of its strength within a few days of placement. It is non-toxic, applied with no heat, and works with the same equipment used in standard road construction.</p>
+
+    <p class="body-text reveal">It requires a wearing layer on top — chip seal, microsurfacing, or asphalt overlay. It is designed for roads with base and surface distress, not for roads whose primary failure is in the subgrade. A pre-design soil evaluation is standard practice and is included with all Build Plus-supplied projects.</p>
+
+    <div class="closing-bottom-line reveal">
+      Consistent, well-documented strength improvement across soil types in independent laboratory testing. A proven application process with a full performance specification framework. Successful construction across climates from the arid Southwest to the Midwest freeze-thaw cycle.
+    </div>
+
+    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="margin-top:var(--space-lg);">
+      <div class="section-cta-text">
+        <div class="section-cta-label">Ready to talk about your project?</div>
+        <div class="section-cta-sub">Text Dan directly · (864) 777-0688</div>
+      </div>
+      <div class="section-cta-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ════ GLOSSARY ════ -->
+<section class="section section--warm" id="glossary">
+  <div class="section-inner">
+
+    <div class="section-label reveal">Appendix</div>
+    <h2 class="section-title reveal reveal-delay-1">Glossary of Terms</h2>
+
+    <div class="gloss-grid">
+      <div class="gloss-item reveal"><div class="gloss-term">AASHTO</div><div class="gloss-def">American Association of State Highway and Transportation Officials. Publishes pavement design standards and materials test methods.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">ASTM</div><div class="gloss-def">ASTM International. Publishes standardized test methods referenced throughout this document.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">CBR — California Bearing Ratio</div><div class="gloss-def">Load-bearing strength of soil expressed as a percentage of a crushed-stone reference. Higher is stronger; a primary input for pavement thickness design.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">DCP — Dynamic Cone Penetrometer</div><div class="gloss-def">A probe driven into a layer to estimate in-place strength by depth.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">ESAL — Equivalent Single Axle Load</div><div class="gloss-def">Standard unit for counting traffic damage as equivalent passes of an 18,000-pound axle.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">FDR — Full Depth Reclamation</div><div class="gloss-def">Rebuilding a road by grinding the existing surface and base and treating the reclaimed material in place.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">FWD — Falling Weight Deflectometer</div><div class="gloss-def">Drops a known load and measures deflection to back-calculate layer stiffness values.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">GBS — Granular Base Stabilization</div><div class="gloss-def">Stabilization of an existing granular base layer, typically without full reclamation.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">ITS / IDT — Indirect Tensile Strength</div><div class="gloss-def">Measures resistance to being pulled apart. Relates to cracking resistance under thermal cycling and traffic.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">P200</div><div class="gloss-def">Percentage of material passing the No. 200 sieve — the very fine fraction. Higher P200 generally indicates more moisture-sensitive material.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">PI — Plasticity Index</div><div class="gloss-def">The moisture range over which a clay behaves plastically. Lower PI means a more stable, less swell-prone soil.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">RAP — Recycled Asphalt Pavement</div><div class="gloss-def">Ground-up material from an existing asphalt road, reused as base material in FDR applications.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">Resilient Modulus</div><div class="gloss-def">Stiffness of a material under repeated traffic loading. The primary structural input for mechanistic pavement design.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">Structural Layer Coefficient</div><div class="gloss-def">The a-value in AASHTO design expressing how much structural capacity a unit thickness of a layer contributes.</div></div>
+      <div class="gloss-item reveal"><div class="gloss-term">UCS — Unconfined Compressive Strength</div><div class="gloss-def">Crushing strength of a cylindrical specimen with no lateral support. Standard strength metric for stabilized materials.</div></div>
+      <div class="gloss-item reveal reveal-delay-1"><div class="gloss-term">VOC — Volatile Organic Compound</div><div class="gloss-def">Evaporating organic chemical. SS3MB is VOC-free.</div></div>
+    </div>
+
+    <div style="margin-top:var(--space-lg);padding-top:var(--space-md);border-top:1px solid var(--rule);font-family:'DM Mono',monospace;font-size:11px;color:rgba(33,30,26,0.38);letter-spacing:0.04em;line-height:1.9;">
+      Performance values are attributed to their sources throughout. Independent laboratory data, third-party field documentation, and manufacturer technical literature are each identified in context. Project-specific performance is dependent on native soil composition, site conditions, and mix design. A pre-design soil evaluation is standard with all Build Plus-supplied projects.<br>
+      Build Plus LLC · Engineered Earth Solutions · yourbuildplus.com
+    </div>
+
+  </div>
+</section>
+
+<!-- ════ FOOTER ════ -->
+<footer class="footer">
+  <div class="footer-brand">Build <span>Plus</span> LLC</div>
+  <div class="footer-meta">
+    In-Place BaseGrade · SS3MB Technical Reference Dossier<br>
+    yourbuildplus.com · Engineered Earth Solutions
+  </div>
+</footer>
+
+<!-- ════ JS ════ -->
+<script>
+// Scroll reveal
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+revealEls.forEach(el => observer.observe(el));
+
+// Staggered test items
+const testItems = document.querySelectorAll('.test-item');
+const testObserver = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      const idx = Array.from(testItems).indexOf(e.target);
+      setTimeout(() => {
+        e.target.classList.add('visible');
+      }, idx * 80);
+      testObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
+testItems.forEach(el => testObserver.observe(el));
+
+// Number counter animation
+function animateCounter(el, target, duration) {
+  let start = 0;
+  const step = timestamp => {
+    if (!start) start = timestamp;
+    const progress = Math.min((timestamp - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+const counterEls = document.querySelectorAll('[data-target]');
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      animateCounter(e.target, parseInt(e.target.dataset.target), 1200);
+      counterObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+counterEls.forEach(el => counterObserver.observe(el));
+
+// Nav active state on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 80) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.style.color = a.getAttribute('href') === '#' + current
+      ? 'var(--bronze-light)' : '';
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>

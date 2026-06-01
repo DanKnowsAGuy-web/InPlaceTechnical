@@ -56,7 +56,7 @@ body {
 ═══════════════════════════════════════ */
 .nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  padding: 0 var(--side-pad);
+  padding: 0 16px 0 16px;
   height: 56px;
   display: flex; align-items: center; justify-content: space-between;
   background: rgba(33,30,26,0.92);
@@ -65,6 +65,10 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.06);
   transform: translateY(-100%);
   animation: navIn 0.6s 0.8s cubic-bezier(0.22,1,0.36,1) forwards;
+  gap: 8px;
+}
+@media (min-width: 601px) {
+  .nav { padding: 0 clamp(20px, 4vw, 48px); }
 }
 @keyframes navIn { to { transform: translateY(0); } }
 
@@ -610,11 +614,13 @@ tbody tr.hl td:first-child { border-left: 2px solid var(--bronze); padding-left:
 ═══════════════════════════════════════ */
 .fab {
   position: fixed;
-  bottom: 28px; right: 28px;
+  bottom: 24px;
+  right: clamp(12px, 4vw, 28px);
   z-index: 200;
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 24px 0 18px;
-  height: 60px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px 0 16px;
+  height: 58px;
+  max-width: calc(100vw - clamp(24px, 8vw, 56px));
   background: var(--bronze);
   color: #fff;
   text-decoration: none;
@@ -625,6 +631,7 @@ tbody tr.hl td:first-child { border-left: 2px solid var(--bronze); padding-left:
   animation: fabIn 0.7s 1.4s cubic-bezier(0.22,1,0.36,1) forwards;
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   white-space: nowrap;
+  overflow: hidden;
 }
 .fab:hover {
   background: var(--bronze-light);
@@ -671,13 +678,13 @@ tbody tr.hl td:first-child { border-left: 2px solid var(--bronze); padding-left:
 
 @media (max-width: 600px) {
   .fab {
-    bottom: 20px; right: 16px;
-    height: 56px;
-    padding: 0 18px 0 14px;
-    gap: 10px;
+    height: 52px;
+    padding: 0 14px 0 12px;
+    gap: 8px;
   }
-  .fab-label { font-size: 16px; }
-  .fab-sub { font-size: 10px; letter-spacing: 0.06em; }
+  .fab-label { font-size: 15px; }
+  .fab-sub { font-size: 10px; letter-spacing: 0.05em; }
+  .fab-icon svg { width: 17px; height: 17px; }
 }
 
 /* ═══════════════════════════════════════
@@ -685,20 +692,38 @@ tbody tr.hl td:first-child { border-left: 2px solid var(--bronze); padding-left:
 ═══════════════════════════════════════ */
 .nav-cta {
   display: flex; align-items: center; gap: 7px;
-  padding: 0 16px;
-  height: 44px;
+  padding: 0 14px;
+  height: 40px;
   background: var(--bronze);
   color: #fff !important;
   text-decoration: none;
   font-family: 'DM Mono', monospace;
-  font-size: 12px; font-weight: 600;
-  letter-spacing: 0.10em; text-transform: uppercase;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
   white-space: nowrap;
   transition: background 0.2s;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .nav-cta:hover { background: var(--bronze-light) !important; color: #fff !important; }
 .nav-cta svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.nav-cta-label { display: inline; }
+
+@media (max-width: 600px) {
+  .nav-cta {
+    padding: 0 12px;
+    gap: 6px;
+    height: 40px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  /* Shorten label on mobile to prevent overflow */
+  .nav-cta-label { display: none; }
+  .nav-cta-short { display: inline; }
+}
+@media (min-width: 601px) {
+  .nav-cta-short { display: none; }
+}
 
 /* ═══════════════════════════════════════
    TEXT A STRATEGIST — INLINE SECTION CTA
@@ -866,15 +891,16 @@ ol.process-list li:last-child { border-bottom: none; }
       <li><a href="#application">Application</a></li>
       <li><a href="#testing">Testing</a></li>
     </ul>
-    <a class="nav-cta" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="nav-cta" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Text a Strategist
+      <span class="nav-cta-label">Text a Strategist</span>
+      <span class="nav-cta-short">Text Dan</span>
     </a>
   </div>
 </nav>
 
 <!-- ════ FLOATING CTA ════ -->
-<a class="fab" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" aria-label="Text a Strategist">
+<a class="fab" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" aria-label="Text a Strategist">
   <div class="fab-icon">
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   </div>
@@ -971,7 +997,7 @@ ol.process-list li:last-child { border-bottom: none; }
       </table>
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Questions about SS3MB for your project?</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1012,7 +1038,7 @@ ol.process-list li:last-child { border-bottom: none; }
 
     <p class="body-text reveal"><strong>Portland cement option.</strong> For applications requiring higher rigidity, SS3MB can be combined with less than 5% Portland cement in a full-depth reclamation mix, producing structural strengths of 5,000 to 6,000 PSI at 12-inch minimum depth. This is evaluated as a distinct mix design with separate QA targets.</p>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Want to see how this chemistry applies to your soils?</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1115,7 +1141,7 @@ ol.process-list li:last-child { border-bottom: none; }
       </table>
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Ready to see these numbers on your material?</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1183,7 +1209,7 @@ ol.process-list li:last-child { border-bottom: none; }
       <div class="prop-cell"><div class="prop-num">05</div><div class="prop-name">Thermal cracking resistance</div></div>
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Want a mix design developed for your native soils?</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1280,7 +1306,7 @@ ol.process-list li:last-child { border-bottom: none; }
       The South Bend case documents constructability and next-day wear-surface placement in a freeze-thaw climate — one of the more demanding scenarios for any base stabilization treatment.
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Is your road a candidate? Let's find out.</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1308,7 +1334,7 @@ ol.process-list li:last-child { border-bottom: none; }
       <strong>Accreditation note.</strong> The third-party laboratory held AASHTO accreditation and US Army Corps of Engineers qualification at the time all referenced testing was conducted. Build Plus can facilitate engagement with a currently accredited laboratory for project-specific mix design and verification testing.
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F">
       <div class="section-cta-text">
         <div class="section-cta-label">Want to request the full third-party test record?</div>
         <div class="section-cta-sub">Text a Strategist · Dan · (864) 777-0688</div>
@@ -1377,7 +1403,7 @@ ol.process-list li:last-child { border-bottom: none; }
     <div class="eval-gate reveal" id="contact">
       <div class="eval-gate-label">Start a Project Evaluation</div>
       <p>Build Plus provides mix design, testing coordination, and technical support for all project evaluations. Text Dan directly to initiate a site assessment or to request the full third-party test record.</p>
-      <a href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:0 20px;height:44px;background:var(--bronze);color:#fff;text-decoration:none;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.04em;transition:background 0.2s;">
+      <a href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:0 20px;height:44px;background:var(--bronze);color:#fff;text-decoration:none;font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.04em;transition:background 0.2s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Text Dan · (864) 777-0688
       </a>
@@ -1403,7 +1429,7 @@ ol.process-list li:last-child { border-bottom: none; }
       Consistent, well-documented strength improvement across soil types in independent laboratory testing. A proven application process with a full performance specification framework. Successful construction across climates from the arid Southwest to the Midwest freeze-thaw cycle.
     </div>
 
-    <a class="section-cta reveal" href="sms:+18647770688&body=Hi%20Dan%20%E2%80%94%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%E2%80%99d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="margin-top:var(--space-lg);">
+    <a class="section-cta reveal" href="sms:+18647770688?body=Hi%20Dan%20-%20I%20was%20reviewing%20the%20In-Place%20BaseGrade%20technical%20dossier%20and%20I%27d%20like%20to%20discuss%20a%20potential%20project.%20Can%20we%20connect%3F" style="margin-top:var(--space-lg);">
       <div class="section-cta-text">
         <div class="section-cta-label">Ready to talk about your project?</div>
         <div class="section-cta-sub">Text Dan directly · (864) 777-0688</div>
